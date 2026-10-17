@@ -1,14 +1,16 @@
 package com.pagegrab.app
 
+import android.Manifest
 import android.app.Activity
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
@@ -18,6 +20,8 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
 
 private fun fmt(b: Long): String = when {
@@ -52,6 +56,12 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Prefs.init(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -96,13 +106,19 @@ class MainActivity : Activity() {
         root.addView(row2)
 
         val row3 = LinearLayout(this)
-        row3.addView(btn("UPDATE ENGINE (yt-dlp)") { updateEngine() })
+        row3.addView(btn("SETTINGS") { startActivity(Intent(this, SettingsActivity::class.java)) })
+        row3.addView(btn("HISTORY") { startActivity(Intent(this, HistoryActivity::class.java)) })
+        row3.addView(btn("LOGIN") { startActivity(Intent(this, LoginActivity::class.java)) })
         root.addView(row3)
 
         setContentView(root)
 
         scanner = PageScanner(this, root, { s -> status.text = s }, { r -> showResults(r) })
         handleIntent(intent)
+
+        if (Prefs.autoUpdateEngine) {
+            worker.execute { Engine.update(this) }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -191,40 +207,12 @@ class MainActivity : Activity() {
         if (engineJobs.isNotEmpty()) runEngine(engineJobs)
     }
 
+    /** Queues the picked items and starts the background service — downloads now survive leaving the app. */
     private fun runEngine(jobs: List<Item>) {
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        btnDl.isEnabled = false
-        btnScan.isEnabled = false
-        worker.execute {
-            var okAll = 0
-            var last = ""
-            jobs.forEachIndexed { idx, job ->
-                runOnUiThread { status.text = "ENGINE ${idx + 1}/${jobs.size}: STARTING..." }
-                val (ok, msg) = Engine.download(this, job) { p, eta ->
-                    runOnUiThread { status.text = "ENGINE ${idx + 1}/${jobs.size}: $p% • ETA ${eta}s" }
-                }
-                if (ok) okAll++
-                last = msg
-            }
-            runOnUiThread {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                btnScan.isEnabled = true
-                refreshBtn()
-                status.text = if (okAll == jobs.size) "DONE. SAVED IN Downloads/PageGrab" else last
-                Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    private fun updateEngine() {
-        status.text = "UPDATING ENGINE..."
-        btnScan.isEnabled = false
-        worker.execute {
-            val r = Engine.update(this)
-            runOnUiThread {
-                status.text = r
-                btnScan.isEnabled = true
-            }
-        }
+        jobs.forEach { JobQueue.add(it, scanner.pageUrl, scanner.pageTitle, scanner.ua) }
+        ContextCompat.startForegroundService(this, Intent(this, DownloadService::class.java))
+        status.text = "QUEUED ${jobs.size} JOB(S). RUNNING IN BACKGROUND — CHECK THE NOTIFICATION, OR HISTORY WHEN DONE."
+        Toast.makeText(this, "Queued ${jobs.size} download(s)", Toast.LENGTH_SHORT).show()
+        refreshBtn()
     }
 }

@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PageGrab</string>
+    <string name="paste">TEMPEL</string>
+    <string name="scan">PINDAI</string>
+    <string name="download">UNDUH</string>
+    <string name="settings">PENGATURAN</string>
+    <string name="history">RIWAYAT</string>
+    <string name="login">MASUK</string>
+</resources>

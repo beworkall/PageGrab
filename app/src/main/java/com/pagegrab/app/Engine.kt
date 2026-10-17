@@ -58,6 +58,7 @@ object Engine {
             req.addOption("--no-playlist")
             req.addOption("--no-warnings")
             req.addOption("--socket-timeout", "15")
+            Prefs.proxyUrl()?.let { req.addOption("--proxy", it) }
             val out: String = YoutubeDL.getInstance().execute(req).out ?: return null
             val start = out.indexOf('{')
             if (start < 0) return null
@@ -141,8 +142,17 @@ object Engine {
             req.addOption("--windows-filenames")
             req.addOption("--no-mtime")
             req.addOption("--embed-metadata")
-            req.addOption("--write-info-json")
             req.addOption("--concurrent-fragments", "4")
+            if (Prefs.writeInfoJson) req.addOption("--write-info-json")
+            if (Prefs.embedThumb) req.addOption("--embed-thumbnail")
+            if (Prefs.embedSubs) {
+                req.addOption("--embed-subs")
+                req.addOption("--sub-langs", "all")
+            }
+            Prefs.proxyUrl()?.let { req.addOption("--proxy", it) }
+            if (Prefs.extraYtArgs.isNotBlank()) {
+                Prefs.extraYtArgs.trim().split(Regex("\\s+")).forEach { req.addOption(it) }
+            }
 
             val a = item.ytArgs ?: emptyList()
             var i = 0

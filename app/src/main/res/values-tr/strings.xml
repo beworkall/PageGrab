@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PageGrab</string>
+    <string name="paste">YAPIŞTIR</string>
+    <string name="scan">TARA</string>
+    <string name="download">İNDİR</string>
+    <string name="settings">AYARLAR</string>
+    <string name="history">GEÇMİŞ</string>
+    <string name="login">GİRİŞ</string>
+</resources>

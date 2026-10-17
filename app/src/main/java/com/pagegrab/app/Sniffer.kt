@@ -33,7 +33,7 @@ data class Item(
 
 data class Probe(val mime: String, val size: Long, val lastMod: String, val disp: String, val finalUrl: String)
 
-private const val MIN_IMG = 10_000L // skip icons / tracking pixels under ~10 KB
+private val MIN_IMG: Long get() = (if (Prefs.minImageKb > 0) Prefs.minImageKb else 10) * 1024L
 
 object Kinds {
     private val groups = mapOf(
@@ -277,7 +277,10 @@ class PageScanner(
         pool.execute {
             val cand = LinkedHashSet<String>()
             for (u in forced) if (u.startsWith("http")) cand.add(u)
-            for (u in normal) if (u.startsWith("http") && Kinds.fromUrl(u) != null) cand.add(u)
+            for (u in normal) if (u.startsWith("http") && Kinds.fromUrl(u) != null) {
+                if (!Prefs.includeImages && Kinds.fromUrl(u) == "IMAGE") continue
+                cand.add(u)
+            }
             val tasks = cand.take(250).map { link -> Callable<Item?> { makeItem(link, page, agent) } }
             val got = probes.invokeAll(tasks).mapNotNull { f -> try { f.get() } catch (e: Exception) { null } }
             val order = listOf("VIDEO", "AUDIO", "STREAM", "DOC", "ARCHIVE", "FILE", "IMAGE")

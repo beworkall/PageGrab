@@ -15,8 +15,13 @@ import java.util.Locale
 
 object Downloader {
 
-    /** Returns (started, skipped). Uses Android's built-in DownloadManager: resumable, notifications, no extra libs. */
+    /** Returns (started, skipped). Uses Android's built-in DownloadManager: resumable, notifications, no extra libs.
+     *  When a custom proxy is set, DownloadManager can't use it, so files are fetched with a small
+     *  internal downloader instead (proxyDownload below). */
     fun start(ctx: Context, items: List<Item>, pageUrl: String, ua: String, title: String): Pair<Int, Int> {
+        if (Prefs.proxyMode == "CUSTOM" && Prefs.proxyUrl() != null) {
+            return proxyDownload(ctx, items, pageUrl, ua, title)
+        }
         val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val used = HashSet<String>()
         val log = JSONArray()
@@ -61,6 +66,42 @@ object Downloader {
             }
         }
 
+        if (ok > 0) writeLog(ctx, pageUrl, title, log)
+        return Pair(ok, skipped)
+    }
+
+    /** Fallback used only when a custom proxy is set: downloads via HttpURLConnection through that proxy. */
+    private fun proxyDownload(ctx: Context, items: List<Item>, pageUrl: String, ua: String, title: String): Pair<Int, Int> {
+        val proxyUrl = Prefs.proxyUrl() ?: return Pair(0, items.size)
+        val uri = java.net.URI(proxyUrl)
+        val type = if (Prefs.proxyType == "http") java.net.Proxy.Type.HTTP else java.net.Proxy.Type.SOCKS
+        val proxy = java.net.Proxy(type, java.net.InetSocketAddress(uri.host, uri.port))
+        val log = JSONArray()
+        var ok = 0
+        var skipped = 0
+        for (item in items) {
+            if (item.type == "STREAM") { skipped++; continue }
+            try {
+                val c = (java.net.URL(item.url).openConnection(proxy)) as java.net.HttpURLConnection
+                c.setRequestProperty("User-Agent", ua)
+                c.setRequestProperty("Referer", pageUrl)
+                CookieManager.getInstance().getCookie(item.url)?.let { c.setRequestProperty("Cookie", it) }
+                c.connectTimeout = 15000
+                c.readTimeout = 20000
+                val cv = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, item.name)
+                    put(MediaStore.Downloads.MIME_TYPE, item.mime.ifBlank { "application/octet-stream" })
+                    put(MediaStore.Downloads.RELATIVE_PATH, "Download/PageGrab")
+                }
+                val outUri = ctx.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: continue
+                ctx.contentResolver.openOutputStream(outUri)?.use { os -> c.inputStream.use { it.copyTo(os) } }
+                c.disconnect()
+                ok++
+                log.put(JSONObject().put("file", item.name).put("url", item.url).put("type", item.type))
+            } catch (e: Exception) {
+                skipped++
+            }
+        }
         if (ok > 0) writeLog(ctx, pageUrl, title, log)
         return Pair(ok, skipped)
     }

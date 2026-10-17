@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">PageGrab</string>
+    <string name="paste">PASTE</string>
+    <string name="scan">SCAN</string>
+    <string name="all_none">ALL / NONE</string>
+    <string name="download">DOWNLOAD</string>
+    <string name="settings">SETTINGS</string>
+    <string name="history">HISTORY</string>
+    <string name="login">LOGIN</string>
+    <string name="update_engine">UPDATE ENGINE</string>
+    <string name="hint_url">PASTE ANY LINK</string>
+    <string name="settings_downloads">DOWNLOADS</string>
+    <string name="settings_engine">ENGINE</string>
+    <string name="settings_media">MEDIA</string>
+    <string name="settings_proxy">PROXY</string>
+    <string name="settings_notifications">NOTIFICATIONS AND LOOK</string>
+    <string name="settings_storage">STORAGE AND PRIVACY</string>
+    <string name="settings_about">ABOUT</string>
+</resources>

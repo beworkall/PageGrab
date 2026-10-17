@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PageGrab</string>
+    <string name="paste">COLLER</string>
+    <string name="scan">SCANNER</string>
+    <string name="download">TÉLÉCHARGER</string>
+    <string name="settings">PARAMÈTRES</string>
+    <string name="history">HISTORIQUE</string>
+    <string name="login">CONNEXION</string>
+</resources>

@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">پیج گریب</string>
+    <string name="paste">پیسٹ</string>
+    <string name="scan">اسکین</string>
+    <string name="download">ڈاؤن لوڈ</string>
+    <string name="settings">ترتیبات</string>
+    <string name="history">تاریخ</string>
+    <string name="login">لاگ ان</string>
+</resources>

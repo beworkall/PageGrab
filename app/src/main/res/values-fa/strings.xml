@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">پیج گرب</string>
+    <string name="paste">جای‌گذاری</string>
+    <string name="scan">اسکن</string>
+    <string name="download">دانلود</string>
+    <string name="settings">تنظیمات</string>
+    <string name="history">تاریخچه</string>
+    <string name="login">ورود</string>
+</resources>

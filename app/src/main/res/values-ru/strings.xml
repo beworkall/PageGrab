@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">PageGrab</string>
+    <string name="paste">ВСТАВИТЬ</string>
+    <string name="scan">СКАН</string>
+    <string name="download">СКАЧАТЬ</string>
+    <string name="settings">НАСТРОЙКИ</string>
+    <string name="history">ИСТОРИЯ</string>
+    <string name="login">ВХОД</string>
+</resources>

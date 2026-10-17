@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">पेजग्रैब</string>
+    <string name="paste">पेस्ट</string>
+    <string name="scan">स्कैन</string>
+    <string name="download">डाउनलोड</string>
+    <string name="settings">सेटिंग्स</string>
+    <string name="history">इतिहास</string>
+    <string name="login">लॉगिन</string>
+</resources>
