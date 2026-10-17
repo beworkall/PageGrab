@@ -7,8 +7,10 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.*
 import java.util.concurrent.Executors
 
@@ -99,6 +101,36 @@ class LoginActivity : Activity() {
         val s = web.settings
         s.javaScriptEnabled = true
         s.domStorageEnabled = true
+        s.setSupportMultipleWindows(true)
+        s.javaScriptCanOpenWindowsAutomatically = true
+        web.webChromeClient = object : WebChromeClient() {
+            // Google/Facebook/etc "sign in" buttons open via window.open() — without this,
+            // a plain WebView just eats that click and nothing happens.
+            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message): Boolean {
+                val popup = WebView(this@LoginActivity)
+                popup.settings.javaScriptEnabled = true
+                popup.settings.domStorageEnabled = true
+                val dialog = android.app.Dialog(this@LoginActivity, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                val box = LinearLayout(this@LoginActivity).apply { orientation = LinearLayout.VERTICAL }
+                box.addView(Button(this@LoginActivity).apply {
+                    text = "✕ CLOSE"
+                    setOnClickListener { dialog.dismiss() }
+                })
+                box.addView(popup, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+                popup.webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(v: WebView, url: String) {
+                        // most OAuth popups close themselves on success; this catches the rest
+                        if (url.contains("close") || url == "about:blank") dialog.dismiss()
+                    }
+                }
+                dialog.setContentView(box)
+                dialog.setOnDismissListener { CookieManager.getInstance().flush() }
+                dialog.show()
+                (resultMsg.obj as WebView.WebViewTransport).webView = popup
+                resultMsg.sendToTarget()
+                return true
+            }
+        }
         root.addView(web, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         setContentView(root)
