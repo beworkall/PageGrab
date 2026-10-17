@@ -5,6 +5,7 @@ import android.app.Activity
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
