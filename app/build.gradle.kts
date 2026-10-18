@@ -11,8 +11,8 @@ android {
         applicationId = "com.pagegrab.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "5.0"
+        versionCode = 6
+        versionName = "6.0"
         // arm64 only = keeps the APK small (covers practically every phone made since ~2017).
         // Need old 32-bit phones too? add "armeabi-v7a" here.
         ndk { abiFilters += listOf("arm64-v8a") }

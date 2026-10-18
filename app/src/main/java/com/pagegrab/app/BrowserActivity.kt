@@ -26,6 +26,8 @@ class BrowserActivity : Activity() {
     private lateinit var progress: ProgressBar
     private lateinit var web: WebView
     private lateinit var incognitoBtn: TextView
+    private lateinit var tempMailChip: TextView
+    private lateinit var tempPanelHolder: LinearLayout
     private lateinit var tempPanel: LinearLayout
     private lateinit var tempStatus: TextView
     private lateinit var inboxList: ListView
@@ -47,20 +49,53 @@ class BrowserActivity : Activity() {
         }
         UI.applyWindowBg(root)
 
-        // ---------------- toolbar ----------------
-        val toolbar = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        toolbar.addView(UI.iconButton(this, "‹") { if (web.canGoBack()) web.goBack() })
-        toolbar.addView(UI.iconButton(this, "›") { if (web.canGoForward()) web.goForward() })
-        toolbar.addView(UI.iconButton(this, "↻") { web.reload() })
-        addressBar = UI.styledEditText(this, "Search or enter a site").apply {
+        // ---------------- Chrome-style top bar: home | pill search bar | temp-mail chip | ⋮ menu ----------------
+        val topBar = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        topBar.addView(UI.iconButton(this, "⌂") { web.loadUrl("https://www.google.com") })
+
+        val pill = LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            background = UI.pillBackground(this@BrowserActivity)
+            setPadding(dp(14), dp(2), dp(8), dp(2))
+            val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            lp.marginStart = dp(4); lp.marginEnd = dp(4)
+            layoutParams = lp
+        }
+        pill.addView(TextView(this).apply {
+            text = "🔍"
+            setTextColor(Color.parseColor(UI.TEXT_DIM))
+            textSize = 15f
+        })
+        addressBar = EditText(this).apply {
+            hint = "Search or enter a site"
+            setHintTextColor(Color.parseColor(UI.TEXT_DIM))
+            setTextColor(Color.parseColor(UI.TEXT))
+            background = null
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            setPadding(dp(10), dp(10), dp(6), dp(10))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             setOnEditorActionListener { _, _, _ -> go(text.toString()); true }
         }
-        toolbar.addView(addressBar)
-        root.addView(toolbar)
+        pill.addView(addressBar)
+        incognitoBtn = TextView(this).apply {
+            text = "🕶"
+            textSize = 15f
+            visibility = android.view.View.GONE
+            setPadding(dp(4), 0, dp(4), 0)
+        }
+        pill.addView(incognitoBtn)
+        topBar.addView(pill)
+
+        // Temp-mail shows as a small "extension" chip next to the address bar, like a Chrome
+        // extension icon — tap to open the temp inbox panel; only visible once enabled.
+        tempMailChip = UI.iconButton(this, "✉") { toggleTempPanel() }
+        tempMailChip.visibility = if (Prefs.tempMailEnabled) android.view.View.VISIBLE else android.view.View.GONE
+        topBar.addView(tempMailChip)
+
+        topBar.addView(UI.iconButton(this, "⋮") { showMenu() })
+        root.addView(topBar)
 
         progress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
@@ -68,22 +103,9 @@ class BrowserActivity : Activity() {
         }
         root.addView(progress)
 
-        // ---------------- action row ----------------
-        val actions = LinearLayout(this)
-        incognitoBtn = TextView(this)
-        actions.addView(UI.secondaryButton(this, "🕶 INCOGNITO") { toggleIncognito() }.also {
-            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            incognitoBtn = it
-        })
-        actions.addView(UI.secondaryButton(this, "DESKTOP") { toggleDesktop() }.also {
-            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        actions.addView(UI.secondaryButton(this, "↗ OPEN OUTSIDE") {
-            try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(web.url))) } catch (e: Exception) { }
-        }.also { it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f) })
-        root.addView(actions)
-
-        if (Prefs.tempMailEnabled) root.addView(buildTempMailPanel())
+        tempPanelHolder = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(tempPanelHolder)
+        if (Prefs.tempMailEnabled) tempPanelHolder.addView(buildTempMailPanel())
 
         web = WebView(this)
         val s = web.settings
@@ -139,6 +161,45 @@ class BrowserActivity : Activity() {
         web.loadUrl(u)
     }
 
+    // ---------------- ⋮ menu (Chrome-style: everything besides nav lives here) ----------------
+    private fun showMenu() {
+        val options = arrayOf(
+            if (incognito) "🕶  Turn off Incognito" else "🕶  Turn on Incognito",
+            if (desktopMode) "🖥  Desktop site: ON" else "🖥  Desktop site: OFF",
+            "↗  Open in external browser",
+            "🔗  Share this page",
+            if (Prefs.tempMailEnabled) "✉  Hide temp mail" else "✉  Enable temp mail",
+            "⚙  Settings"
+        )
+        android.app.AlertDialog.Builder(this)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> toggleIncognito()
+                    1 -> toggleDesktop()
+                    2 -> try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(web.url))) } catch (e: Exception) { }
+                    3 -> try {
+                        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"; putExtra(Intent.EXTRA_TEXT, web.url ?: "")
+                        }, "Share link"))
+                    } catch (e: Exception) { }
+                    4 -> {
+                        Prefs.tempMailEnabled = !Prefs.tempMailEnabled
+                        tempMailChip.visibility = if (Prefs.tempMailEnabled) android.view.View.VISIBLE else android.view.View.GONE
+                        if (Prefs.tempMailEnabled && tempPanelHolder.childCount == 0) tempPanelHolder.addView(buildTempMailPanel())
+                        if (!Prefs.tempMailEnabled) tempPanelHolder.removeAllViews()
+                    }
+                    5 -> startActivity(Intent(this, SettingsActivity::class.java))
+                }
+            }
+            .show()
+    }
+
+    private fun toggleTempPanel() {
+        if (tempPanelHolder.childCount == 0) tempPanelHolder.addView(buildTempMailPanel())
+        tempPanelHolder.visibility = if (tempPanelHolder.visibility == android.view.View.VISIBLE)
+            android.view.View.GONE else android.view.View.VISIBLE
+    }
+
     // ---------------- Incognito ----------------
     private fun toggleIncognito() {
         incognito = !incognito
@@ -155,7 +216,7 @@ class BrowserActivity : Activity() {
         CookieManager.getInstance().setAcceptCookie(!incognito)
         web.settings.domStorageEnabled = true
         web.settings.cacheMode = if (incognito) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
-        incognitoBtn.setTextColor(Color.parseColor(if (incognito) UI.DANGER else UI.TEXT))
+        incognitoBtn.visibility = if (incognito) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     override fun onDestroy() {
@@ -166,6 +227,11 @@ class BrowserActivity : Activity() {
             web.clearFormData()
         }
         super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (::web.isInitialized && web.canGoBack()) web.goBack() else super.onBackPressed()
     }
 
     private fun toggleDesktop() {

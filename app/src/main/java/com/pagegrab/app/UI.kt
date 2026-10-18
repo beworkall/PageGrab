@@ -113,6 +113,9 @@ object UI {
         setPadding(dp(ctx, 14), dp(ctx, 12), dp(ctx, 14), dp(ctx, 12))
     }
 
+    /** Fully rounded "pill" background, used for the Chrome-style browser address bar. */
+    fun pillBackground(ctx: Context): GradientDrawable = rounded(SURFACE_2, dp(ctx, 24).toFloat())
+
     fun applyWindowBg(root: View) {
         root.setBackgroundColor(Color.parseColor(BG))
     }
