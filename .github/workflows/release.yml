@@ -1,0 +1,44 @@
+name: Signed Release
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      # Decodes the keystore secret to a file for this run only; nothing is written to the repo.
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
+      - name: Build signed release APK
+        env:
+          PAGEGRAB_KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          PAGEGRAB_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          PAGEGRAB_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          PAGEGRAB_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+
+      - name: Clean up keystore file
+        if: always()
+        run: rm -f release.keystore
+
+      - name: Rename APK with version tag
+        run: cp app/build/outputs/apk/release/app-release.apk PageGrab-${{ github.ref_name }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PageGrab-${{ github.ref_name }}.apk
+          generate_release_notes: true

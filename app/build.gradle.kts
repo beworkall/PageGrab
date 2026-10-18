@@ -11,8 +11,8 @@ android {
         applicationId = "com.pagegrab.app"
         minSdk = 29
         targetSdk = 34
-        versionCode = 4
-        versionName = "4.0"
+        versionCode = 5
+        versionName = "5.0"
         // arm64 only = keeps the APK small (covers practically every phone made since ~2017).
         // Need old 32-bit phones too? add "armeabi-v7a" here.
         ndk { abiFilters += listOf("arm64-v8a") }
@@ -25,6 +25,27 @@ android {
 
     // yt-dlp / python / ffmpeg ship as native libs and must be extracted to run
     packaging { jniLibs { useLegacyPackaging = true } }
+
+    // Release signing comes from environment variables set by CI (see .github/workflows/release.yml).
+    // Nothing secret is ever committed to this repo. If the vars aren't set (e.g. a local debug
+    // build), the release build just falls back to the debug key so `assembleRelease` still works.
+    val ksFile = System.getenv("PAGEGRAB_KEYSTORE_PATH")
+    if (ksFile != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(ksFile)
+                storePassword = System.getenv("PAGEGRAB_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("PAGEGRAB_KEY_ALIAS")
+                keyPassword = System.getenv("PAGEGRAB_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (ksFile != null) signingConfig = signingConfigs.getByName("release")
+        }
+    }
 }
 
 dependencies {
