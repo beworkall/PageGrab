@@ -9,7 +9,7 @@
 Video, audio, images, documents, or archives — from YouTube, TikTok, Instagram, X, and 1000+
 other sites — straight to your phone. Free, open source, and ad-free.
 
-[![Latest Release](https://img.shields.io/github/v/release/beworkall/PageGrab?include_prereleases&label=latest%20build&color=5B8CFF)](https://github.com/beworkall/PageGrab/releases/latest)
+[![Latest Release](https://img.shields.io/badge/latest%20build-download-5B8CFF)](https://github.com/beworkall/PageGrab/releases/latest)
 [![Build APK](https://github.com/beworkall/PageGrab/actions/workflows/build.yml/badge.svg)](https://github.com/beworkall/PageGrab/actions/workflows/build.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
