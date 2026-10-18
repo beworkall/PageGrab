@@ -39,5 +39,4 @@ jobs:
           tag_name: latest
           name: "PageGrab (latest build — v${{ steps.ver.outputs.name }})"
           body: "Auto-built from the latest commit on main. Debug-signed — unsigned for a real Play release, fine for direct install. See README for setup."
-          prerelease: true
           files: PageGrab-${{ steps.ver.outputs.name }}-debug.apk
