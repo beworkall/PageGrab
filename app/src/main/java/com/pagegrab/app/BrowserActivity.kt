@@ -103,16 +103,23 @@ class BrowserActivity : Activity() {
         }
         root.addView(progress)
 
-        tempPanelHolder = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        // Collapsed by default — this used to auto-fill with the temp-mail card on open, which
+        // shrank the WebView and made the browser look like it wasn't using the full screen.
+        // Now it stays empty/gone until the ✉ chip or menu item is tapped.
+        tempPanelHolder = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = android.view.View.GONE
+        }
         root.addView(tempPanelHolder)
-        if (Prefs.tempMailEnabled) tempPanelHolder.addView(buildTempMailPanel())
 
         web = WebView(this)
         val s = web.settings
         s.javaScriptEnabled = true
         s.domStorageEnabled = true
         s.setSupportMultipleWindows(true)
-        s.javaScriptCanOpenWindowsAutomatically = true
+        // false on purpose: lets real "Sign in" button clicks (user gesture) open a popup via
+        // onCreateWindow below, but blocks ad/spam sites from auto-spawning popups with no tap.
+        s.javaScriptCanOpenWindowsAutomatically = false
         web.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(v: WebView, p: Int) {
                 progress.progress = p
@@ -185,8 +192,8 @@ class BrowserActivity : Activity() {
                     4 -> {
                         Prefs.tempMailEnabled = !Prefs.tempMailEnabled
                         tempMailChip.visibility = if (Prefs.tempMailEnabled) android.view.View.VISIBLE else android.view.View.GONE
-                        if (Prefs.tempMailEnabled && tempPanelHolder.childCount == 0) tempPanelHolder.addView(buildTempMailPanel())
-                        if (!Prefs.tempMailEnabled) tempPanelHolder.removeAllViews()
+                        // just unlocks the ✉ chip — the box itself only opens when tapped
+                        if (!Prefs.tempMailEnabled) { tempPanelHolder.removeAllViews(); tempPanelHolder.visibility = android.view.View.GONE }
                     }
                     5 -> startActivity(Intent(this, SettingsActivity::class.java))
                 }
