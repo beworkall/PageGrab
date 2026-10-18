@@ -100,3 +100,8 @@ for the signing setup if you're building your own release.
 This is an actively developed solo project — see [open issues](https://github.com/beworkall/PageGrab/issues)
 for what's planned next (download queue UI, Material 3 polish, playlist support). Feedback and
 pull requests welcome.
+
+## Contributing & Feedback
+
+Found a bug, hit an error, or have an idea for a feature? Open an issue or a pull request —
+this project is built in the open, and every report helps. No contribution is too small.
