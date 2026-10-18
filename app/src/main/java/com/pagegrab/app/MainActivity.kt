@@ -6,23 +6,21 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
+import android.view.Gravity
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import java.util.concurrent.Executors
 
 private fun fmt(b: Long): String = when {
     b < 0 -> "SIZE ?"
@@ -37,22 +35,15 @@ private fun label(item: Item): String =
 
 class MainActivity : Activity() {
 
-    private lateinit var urlBox: EditText
+    private lateinit var urlBox: android.widget.EditText
     private lateinit var status: TextView
     private lateinit var list: ListView
-    private lateinit var btnScan: Button
-    private lateinit var btnDl: Button
+    private lateinit var btnScan: android.widget.Button
+    private lateinit var btnDl: android.widget.Button
     private lateinit var scanner: PageScanner
     private var items: List<Item> = emptyList()
-    private val worker = Executors.newSingleThreadExecutor()
 
-    private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
-
-    private fun btn(label: String, click: () -> Unit) = Button(this).apply {
-        text = label
-        setOnClickListener { click() }
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-    }
+    private fun dp(n: Int) = UI.dp(this, n)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,62 +54,71 @@ class MainActivity : Activity() {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
 
-        val root = LinearLayout(this).apply {
+        val outer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(36), dp(16), dp(12))
+            setPadding(dp(14), dp(32), dp(14), dp(10))
         }
-        root.addView(TextView(this).apply {
-            text = "PAGEGRAB"
-            textSize = 26f
-            setTypeface(null, Typeface.BOLD)
-        })
+        UI.applyWindowBg(outer)
 
-        urlBox = EditText(this).apply {
-            hint = "PASTE ANY LINK"
+        // ---------------- header ----------------
+        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        header.addView(UI.title(this, "PAGEGRAB").also {
+            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        header.addView(UI.iconButton(this, "⚙") { startActivity(Intent(this, SettingsActivity::class.java)) })
+        header.addView(UI.iconButton(this, "🕘") { startActivity(Intent(this, HistoryActivity::class.java)) })
+        header.addView(UI.iconButton(this, "🌐") { startActivity(Intent(this, BrowserActivity::class.java)) })
+        outer.addView(header)
+
+        // ---------------- url card ----------------
+        val urlCard = UI.card(this)
+        urlBox = UI.styledEditText(this, "Paste any link").apply {
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
+            setOnEditorActionListener { _, _, _ -> startScan(); true }
         }
-        urlBox.setOnEditorActionListener { _, _, _ -> startScan(); true }
-        root.addView(urlBox)
-
-        val row1 = LinearLayout(this)
-        btnScan = btn("SCAN") { startScan() }
-        row1.addView(btn("PASTE") { paste() })
+        urlCard.addView(urlBox)
+        val row1 = LinearLayout(this).apply { setPadding(0, dp(10), 0, 0) }
+        row1.addView(UI.secondaryButton(this, "PASTE") { paste() }.also {
+            val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            lp.marginEnd = dp(8)
+            it.layoutParams = lp
+        })
+        btnScan = UI.primaryButton(this, "SCAN") { startScan() }.also {
+            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
         row1.addView(btnScan)
-        root.addView(row1)
+        urlCard.addView(row1)
+        outer.addView(urlCard)
 
-        status = TextView(this).apply {
-            text = "PASTE A LINK, HIT SCAN."
-            setPadding(0, dp(8), 0, dp(8))
+        status = UI.label(this, "Paste a link, hit Scan.", dim = true).apply {
+            setPadding(dp(4), dp(10), dp(4), dp(6))
         }
-        root.addView(status)
+        outer.addView(status)
 
+        // ---------------- results list ----------------
         list = ListView(this).apply { choiceMode = ListView.CHOICE_MODE_MULTIPLE }
-        root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        outer.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         list.setOnItemClickListener { _, _, _, _ -> refreshBtn() }
 
-        val row2 = LinearLayout(this)
-        row2.addView(btn("ALL / NONE") { toggleAll() })
-        btnDl = btn("DOWNLOAD (0)") { download() }
-        btnDl.isEnabled = false
+        val row2 = LinearLayout(this).apply { setPadding(0, dp(8), 0, 0) }
+        row2.addView(UI.secondaryButton(this, "ALL / NONE") { toggleAll() }.also {
+            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        btnDl = UI.primaryButton(this, "DOWNLOAD (0)") { download() }.also {
+            it.isEnabled = false
+            it.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
         row2.addView(btnDl)
-        root.addView(row2)
+        outer.addView(row2)
 
-        val row3 = LinearLayout(this)
-        row3.addView(btn("SETTINGS") { startActivity(Intent(this, SettingsActivity::class.java)) })
-        row3.addView(btn("HISTORY") { startActivity(Intent(this, HistoryActivity::class.java)) })
-        row3.addView(btn("LOGIN") { startActivity(Intent(this, LoginActivity::class.java)) })
-        root.addView(row3)
+        setContentView(outer)
 
-        setContentView(root)
-
-        scanner = PageScanner(this, root, { s -> status.text = s }, { r -> showResults(r) })
+        scanner = PageScanner(this, outer, { s -> status.text = s }, { r -> showResults(r) })
         handleIntent(intent)
 
-        if (Prefs.autoUpdateEngine) {
-            worker.execute { Engine.update(this) }
-        }
+        if (Prefs.autoUpdateEngine) Thread { Engine.update(this) }.start()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -159,19 +159,16 @@ class MainActivity : Activity() {
     private fun showResults(r: List<Item>) {
         items = r
         btnScan.isEnabled = true
-        list.adapter = ArrayAdapter(
-            this, android.R.layout.simple_list_item_multiple_choice,
-            r.map { label(it) }
-        )
+        list.adapter = CheckAdapter(this, r.map { label(it) })
         val engine = r.any { it.ytArgs != null }
         val onlyImages = r.all { it.type == "IMAGE" }
         r.forEachIndexed { i, item ->
             list.setItemChecked(i, if (engine) i == 0 else (onlyImages || item.type != "IMAGE"))
         }
         status.text = when {
-            r.isEmpty() -> "NOTHING FOUND. SITE MAY NEED LOGIN OR USE DRM."
-            engine -> "VIDEO: ${scanner.pageTitle.take(70)}\nPICK QUALITY, THEN DOWNLOAD."
-            else -> "FOUND ${r.size} FILES. PICK AND DOWNLOAD."
+            r.isEmpty() -> "Nothing found. Site may need login or use DRM."
+            engine -> "Video: ${scanner.pageTitle.take(70)} — pick a quality, then Download."
+            else -> "Found ${r.size} files. Pick and Download."
         }
         refreshBtn()
     }
@@ -199,9 +196,7 @@ class MainActivity : Activity() {
 
         if (plain.isNotEmpty()) {
             val (ok, skipped) = Downloader.start(this, plain, scanner.pageUrl, scanner.ua, scanner.pageTitle)
-            val msg = "STARTED $ok" +
-                (if (skipped > 0) " • SKIPPED $skipped (STREAM/ERROR)" else "") +
-                " → Downloads/PageGrab"
+            val msg = "Started $ok" + (if (skipped > 0) " • skipped $skipped (stream/error)" else "") + " → Downloads/PageGrab"
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         }
         if (engineJobs.isNotEmpty()) runEngine(engineJobs)
@@ -211,7 +206,7 @@ class MainActivity : Activity() {
     private fun runEngine(jobs: List<Item>) {
         jobs.forEach { JobQueue.add(it, scanner.pageUrl, scanner.pageTitle, scanner.ua) }
         ContextCompat.startForegroundService(this, Intent(this, DownloadService::class.java))
-        status.text = "QUEUED ${jobs.size} JOB(S). RUNNING IN BACKGROUND — CHECK THE NOTIFICATION, OR HISTORY WHEN DONE."
+        status.text = "Queued ${jobs.size} job(s). Running in background — check the notification, or History when done."
         Toast.makeText(this, "Queued ${jobs.size} download(s)", Toast.LENGTH_SHORT).show()
         refreshBtn()
     }

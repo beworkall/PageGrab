@@ -19,11 +19,8 @@ class HistoryActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(32), dp(16), dp(12))
         }
-        root.addView(TextView(this).apply {
-            text = "HISTORY"
-            textSize = 22f
-            setTypeface(null, Typeface.BOLD)
-        })
+        UI.applyWindowBg(root)
+        root.addView(UI.title(this, "HISTORY"))
 
         val list = ListView(this)
         fun refresh() {
@@ -40,13 +37,10 @@ class HistoryActivity : Activity() {
         refresh()
         root.addView(list, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
-        root.addView(Button(this).apply {
-            text = "CLEAR HISTORY"
-            setOnClickListener {
-                History.clear(this@HistoryActivity)
-                refresh()
-                Toast.makeText(this@HistoryActivity, "HISTORY CLEARED", Toast.LENGTH_SHORT).show()
-            }
+        root.addView(UI.secondaryButton(this, "CLEAR HISTORY") {
+            History.clear(this)
+            refresh()
+            Toast.makeText(this, "HISTORY CLEARED", Toast.LENGTH_SHORT).show()
         })
 
         setContentView(root)

@@ -33,7 +33,7 @@
 
         <activity android:name=".SettingsActivity" android:exported="false" android:label="@string/settings" />
         <activity android:name=".HistoryActivity" android:exported="false" android:label="@string/history" />
-        <activity android:name=".LoginActivity" android:exported="false" android:label="@string/login" />
+        <activity android:name=".BrowserActivity" android:exported="false" android:label="@string/login" />
 
         <service
             android:name=".DownloadService"

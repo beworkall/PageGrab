@@ -80,6 +80,9 @@ object Prefs {
     var tempMailEnabled: Boolean
         get() = p.getBoolean("temp_mail_enabled", false)
         set(v) = p.edit().putBoolean("temp_mail_enabled", v).apply()
+    var tempMailPromptShown: Boolean
+        get() = p.getBoolean("temp_mail_prompt_shown", false)
+        set(v) = p.edit().putBoolean("temp_mail_prompt_shown", v).apply()
 
     // Notifications / look
     var theme: String // SYSTEM, DARK, LIGHT

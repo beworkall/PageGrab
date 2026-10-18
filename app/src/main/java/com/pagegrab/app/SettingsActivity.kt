@@ -60,6 +60,7 @@ class SettingsActivity : Activity() {
         Prefs.init(this)
 
         val scroll = ScrollView(this)
+        UI.applyWindowBg(scroll)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(32), dp(16), dp(32))
